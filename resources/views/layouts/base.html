@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <link rel="icon" type="image/png" href="/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
+    <link rel="shortcut icon" href="/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="BTN Cek" />
+    <link rel="manifest" href="/site.webmanifest" />
+
+    <link href="{{ url_for('static', filename='css/app.css') }}" rel="stylesheet">
+
+    <title>{% block title %} {% endblock %} - BTN</title>
+</head>
+<body>
+    <main class="mx-auto h-full w-full px-4 md:px-6 lg:px-8 max-w-7xl">
+        <img src="{{ url_for('static', filename='img/BTN_2024.svg') }}" alt="company logo" class="mx-auto mb-8 size-16">
+        <section class="flex flex-col gap-y-8 py-8" x-data="{ openForm: false, openBulkModal: false }" x-init="$watch('openForm', value => {
+            if (value) $nextTick(() => $refs.jenisInput.focus())
+        })">
+            {% block content %}
+            {% endblock %}
+        </section>
+    </main>
+    <script>
+        function openReleaseModal() {
+            const selected = [...document.querySelectorAll('.cheque-checkbox:checked')]
+                .map(cb => cb.value);
+
+            if (selected.length === 0) {
+                alert("Pilih minimal satu cek.");
+                return;
+            }
+
+            // Isi hidden input dengan ID
+            document.getElementById('cheque_ids_input').value = selected.join(",");
+
+            // Tampilkan modal
+            document.getElementById('release-modal').classList.remove('hidden');
+        }
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const selectAll = document.getElementById('select-all');
+            const checkboxes = document.querySelectorAll('.cheque-checkbox');
+
+            if (selectAll) {
+                selectAll.addEventListener('change', function () {
+                    checkboxes.forEach(cb => {
+                        cb.checked = selectAll.checked;
+                    });
+                });
+            }
+        });
+    </script>
+    <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('chequeForm', () => ({
+                openForm: false,
+                form: {
+                    cheque_type: '',
+                    cheque_code: '',
+                    date: '',
+                    start_number: '',
+                    end_number: '',
+                },
+                async submitForm(event) {
+                    event.preventDefault();
+                    try {
+                        const response = await fetch('/cheque/create', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(this.form),
+                        });
+                        if (!response.ok) throw new Error('Network response was not ok');
+                        const data = await response.json();
+                        if (data.success) {
+                            this.openForm = false;
+                            this.form = {
+                                cheque_type: '',
+                                cheque_code: '',
+                                date: '',
+                                start_number: '',
+                                end_number: '',
+                            };
+                            window.location.reload();
+                        } else {
+                            alert(data.message || 'Something went wrong');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('Failed to submit form');
+                    }
+                },
+            }))
+        })
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
+</body>
+</html>
